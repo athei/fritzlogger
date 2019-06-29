@@ -1,0 +1,34 @@
+[package]
+name = "fritzlogger"
+version = "0.1.0"
+authors = ["Alexander Theißen <alex@theissen.io>"]
+edition = "2018"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+rpath = false
+
+[dependencies]
+futures = "0.1"
+tokio = "0.1"
+roxmltree = "0.6"
+error-chain = "0.12"
+md5 = "0.6"
+bitflags = "1"
+config = "0.9"
+once_cell = "0.2"
+csv = "1"
+toml = "0.5"
+
+[dependencies.serde]
+version = "1"
+features = ["derive"]
+
+[dependencies.clap]
+version = "2.33"
+
+[dependencies.reqwest]
+version = "0.9"
+default-features = true
