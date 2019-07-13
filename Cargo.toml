@@ -3,6 +3,11 @@ name = "fritzlogger"
 version = "0.1.0"
 authors = ["Alexander Theißen <alex@theissen.io>"]
 edition = "2018"
+description = "Periodically gather and store information about your AVM home automation devices"
+keywords = ["avm", "fritz", "fritzbox", "smarthome"]
+readme = "README.md"
+license = "Apache-2.0"
+repository = "https://github.com/athei/fritzlogger"
 
 [profile.release]
 opt-level = 3
@@ -21,13 +26,11 @@ config = "0.9"
 once_cell = "0.2"
 csv = "1"
 toml = "0.5"
+clap = "2.33"
 
 [dependencies.serde]
 version = "1"
 features = ["derive"]
-
-[dependencies.clap]
-version = "2.33"
 
 [dependencies.reqwest]
 version = "0.9"
