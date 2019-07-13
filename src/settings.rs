@@ -70,12 +70,13 @@ fn add_defaults_with_config<'de, S: Settings<'de>>(config: &mut Config) -> Resul
     if S::section() == "" {
         return Ok(());
     }
-    // TODO: handle unwraps
-    let defaults: S = get_with_config(config).unwrap();
+    let defaults: S = get_with_config(config)?;
+    let section = S::section();
     let text = format!(
         "[{}]\n{}\n",
-        S::section(),
-        toml::ser::to_string(&defaults).unwrap()
+        section,
+        toml::ser::to_string(&defaults)
+            .chain_err(|| format!("Failed to serialize default values of backend: {}", section))?
     );
     config.default_settings.push_str(&text);
     Ok(())
