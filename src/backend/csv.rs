@@ -1,6 +1,7 @@
 use super::Backend;
 use crate::device::Device;
 use crate::errors::*;
+use crate::settings;
 
 use config::Value;
 use csv::{Writer, WriterBuilder};
@@ -9,20 +10,14 @@ use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-const NAME: &str = "Csv";
-
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Settings {
     outfile: String,
 }
 
-impl<'de> crate::settings::Settings<'de> for Settings {
+impl<'de> settings::Settings<'de, Csv> for Settings {
     fn defaults() -> Vec<(String, Value)> {
         vec![("outfile".into(), "./fritzaha.csv".into())]
-    }
-
-    fn section() -> &'static str {
-        NAME
     }
 }
 
@@ -30,7 +25,7 @@ pub struct Csv {
     writer: Writer<File>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 struct Record<'a> {
     timestamp: u64,
     id: &'a str,
@@ -41,7 +36,7 @@ impl<'de> Backend<'de> for Csv {
     type Settings = Settings;
 
     fn name() -> &'static str {
-        NAME
+        "Csv"
     }
 
     fn new(settings: Self::Settings) -> Result<Self> {

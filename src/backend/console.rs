@@ -1,18 +1,17 @@
 use super::Backend;
 use crate::device::Device;
 use crate::errors::*;
+use crate::settings;
 
 use std::time::Instant;
-
-const NAME: &str = "Console";
 
 pub struct Console {}
 
 impl<'de> Backend<'de> for Console {
-    type Settings = ();
+    type Settings = settings::No<Self>;
 
     fn name() -> &'static str {
-        NAME
+        "Console"
     }
 
     fn new(_: Self::Settings) -> Result<Self> {

@@ -17,14 +17,24 @@ mod csv;
 static DISPATCHER: Lazy<Dispatcher> =
     Lazy::new(|| Dispatcher::new().expect("Failed to initiate Backends"));
 
-pub trait Backend<'de> {
-    type Settings: settings::Settings<'de>;
+pub trait Backend<'de>: settings::Named + Sized {
+    type Settings: settings::Settings<'de, Self>;
 
-    fn new(settings: Self::Settings) -> Result<Self>
-    where
-        Self: Sized;
     fn name() -> &'static str;
+    fn new(settings: Self::Settings) -> Result<Self>;
     fn log(&mut self, when: Instant, data: &[Device]) -> Result<()>;
+    fn from_settings() -> Result<Self> {
+        Self::new(settings::get_for_backend::<Self>()?)
+    }
+    fn add_defaults() -> Result<()> {
+        settings::add_defaults::<Self>()
+    }
+}
+
+impl<'de, T: Backend<'de>> settings::Named for T {
+    fn name() -> &'static str {
+        <Self as Backend>::name()
+    }
 }
 
 pub struct Dispatcher {
@@ -37,8 +47,8 @@ impl Dispatcher {
         Self::register_defaults()?;
         settings::refresh()?;
         let ret = Self {
-            console: Mutex::new(Console::new(())?),
-            csv: Mutex::new(Csv::new(settings::get()?)?),
+            console: Mutex::new(Console::from_settings()?),
+            csv: Mutex::new(Csv::from_settings()?),
         };
         Ok(ret)
     }
@@ -62,8 +72,8 @@ impl Dispatcher {
     }
 
     pub fn register_defaults() -> Result<()> {
-        settings::add_defaults::<<Console as Backend>::Settings>()?;
-        settings::add_defaults::<<Csv as Backend>::Settings>()?;
+        Console::add_defaults()?;
+        Csv::add_defaults()?;
 
         Ok(())
     }

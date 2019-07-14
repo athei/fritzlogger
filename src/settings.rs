@@ -1,10 +1,11 @@
+use crate::backend::Backend;
 use crate::errors::*;
 
 use config::{Config as CConfig, File, Value};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use std::fmt::Debug;
+use std::marker::PhantomData;
 use std::sync::Mutex;
 
 static CONFIG: Lazy<Mutex<Config>> = Lazy::new(|| {
@@ -12,26 +13,36 @@ static CONFIG: Lazy<Mutex<Config>> = Lazy::new(|| {
         config: CConfig::new(),
         default_settings: String::new(),
     };
-    add_defaults_with_config::<Base>(&mut config).expect("Failed to set base defaults");
+    add_defaults_with_config::<Base, Base>(&mut config).expect("Failed to set base defaults");
     Mutex::new(config)
 });
 
-pub trait Settings<'de>: Deserialize<'de> + Serialize + Debug {
+pub trait Named {
+    fn name() -> &'static str;
+}
+
+pub trait Settings<'de, T: Named>: Deserialize<'de> + Serialize {
     fn defaults() -> Vec<(String, Value)>;
-    fn section() -> &'static str;
-}
-
-impl<'de> Settings<'de> for () {
-    fn defaults() -> Vec<(String, Value)> {
-        vec![]
-    }
-
     fn section() -> &'static str {
-        ""
+        T::name()
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
+pub struct No<T: Named> {
+    #[serde(skip_serializing, skip_deserializing)]
+    _dummy: bool,
+    #[serde(skip_serializing, skip_deserializing)]
+    _phantom: PhantomData<T>,
+}
+
+impl<'de, T: Named> Settings<'de, T> for No<T> {
+    fn defaults() -> Vec<(String, Value)> {
+        vec![("dummy".into(), true.into())]
+    }
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct Base {
     pub url: String,
     pub username: String,
@@ -39,7 +50,13 @@ pub struct Base {
     pub interval: u64,
 }
 
-impl<'de> Settings<'de> for Base {
+impl Named for Base {
+    fn name() -> &'static str {
+        "Base"
+    }
+}
+
+impl<'de> Settings<'de, Base> for Base {
     fn defaults() -> Vec<(String, Value)> {
         vec![
             ("url".into(), "http://fritz.box".into()),
@@ -48,10 +65,6 @@ impl<'de> Settings<'de> for Base {
             ("interval".into(), 60.into()),
         ]
     }
-
-    fn section() -> &'static str {
-        "Base"
-    }
 }
 
 struct Config {
@@ -59,7 +72,7 @@ struct Config {
     default_settings: String,
 }
 
-fn add_defaults_with_config<'de, S: Settings<'de>>(config: &mut Config) -> Result<()> {
+fn add_defaults_with_config<'de, T: Named, S: Settings<'de, T>>(config: &mut Config) -> Result<()> {
     for (key, value) in S::defaults() {
         let key = format!("{}.{}", S::section(), key);
         config
@@ -67,22 +80,23 @@ fn add_defaults_with_config<'de, S: Settings<'de>>(config: &mut Config) -> Resul
             .set_default(&key, value)
             .chain_err(|| "Failed to set defaults")?;
     }
-    if S::section() == "" {
-        return Ok(());
-    }
     let defaults: S = get_with_config(config)?;
     let section = S::section();
-    let text = format!(
-        "[{}]\n{}\n",
-        section,
-        toml::ser::to_string(&defaults)
-            .chain_err(|| format!("Failed to serialize default values of backend: {}", section))?
-    );
-    config.default_settings.push_str(&text);
+    let body = toml::ser::to_string(&defaults)
+        .chain_err(|| format!("Failed to serialize default values of backend: {}", section))?;
+
+    // this backend has no settings
+    if body.is_empty() {
+        return Ok(());
+    }
+
+    config
+        .default_settings
+        .push_str(&format!("[{}]\n{}\n", section, body));
     Ok(())
 }
 
-fn get_with_config<'de, S: Settings<'de>>(config: &Config) -> Result<S> {
+fn get_with_config<'de, T: Named, S: Settings<'de, T>>(config: &Config) -> Result<S> {
     config
         .config
         .get(S::section())
@@ -99,11 +113,15 @@ pub fn load(path: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn add_defaults<'de, S: Settings<'de>>() -> Result<()> {
-    add_defaults_with_config::<S>(&mut CONFIG.lock().unwrap())
+pub fn add_defaults<'de, B: Backend<'de>>() -> Result<()> {
+    add_defaults_with_config::<B, B::Settings>(&mut CONFIG.lock().unwrap())
 }
 
-pub fn get<'de, S: Settings<'de>>() -> Result<S> {
+pub fn get_base() -> Result<Base> {
+    get_with_config::<Base, Base>(&CONFIG.lock().unwrap())
+}
+
+pub fn get_for_backend<'de, T: Backend<'de>>() -> Result<T::Settings> {
     get_with_config(&CONFIG.lock().unwrap())
 }
 

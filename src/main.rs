@@ -79,7 +79,7 @@ fn command_run(args: &ArgMatches<'static>) -> Result<()> {
         .value_of("config")
         .chain_err(|| "Config file must be specified")?;
     settings::load(cfg_path)?;
-    let settings: settings::Base = settings::get()?;
+    let settings: settings::Base = settings::get_base()?;
     let client = Client::new();
     let poll_interval = Duration::from_secs(settings.interval);
     let app = app(client, settings, poll_interval).map_err(print_errors);
