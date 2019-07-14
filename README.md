@@ -5,11 +5,17 @@ log data from the Fritz!Box attached home automation device sensors. This is use
 to do your own data analysis on the raw data. The Fritz!Box itself does not store the historical
 data we need for that.
 
+# Features
+* Log temperature and power meter to csv files.
+* Easily [extensible](https://github.com/athei/fritzlogger/tree/master/src/backend) with further output formats
+
 # Installation
 Rust programmers can simply:
 ```
 cargo install fritzlogger
 ```
+
+For the rest of us there are prebuild binaries for [Windows, MacOS, Linux x86 and Raspberri Pi](https://github.com/athei/fritzlogger/releases).
 
 # Usage
 ```
