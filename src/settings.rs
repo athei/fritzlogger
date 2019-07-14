@@ -48,6 +48,7 @@ pub struct Base {
     pub username: String,
     pub password: String,
     pub interval: u64,
+    pub backends: Vec<String>,
 }
 
 impl Named for Base {
@@ -63,6 +64,7 @@ impl<'de> Settings<'de, Base> for Base {
             ("username".into(), "".into()),
             ("password".into(), "".into()),
             ("interval".into(), 60.into()),
+            ("backends".into(), vec!["Console", "Csv"].into()),
         ]
     }
 }
@@ -136,6 +138,6 @@ pub fn refresh() -> Result<()> {
 }
 
 pub fn defaults() -> Result<String> {
-    crate::backend::Dispatcher::register_defaults()?;
+    crate::backend::Dispatcher::register_backends()?;
     Ok(CONFIG.lock().unwrap().default_settings.clone())
 }
