@@ -10,7 +10,7 @@ use once_cell::sync::OnceCell;
 use tokio::prelude::*;
 
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::Duration;
 
 mod console;
 mod csv;
@@ -22,7 +22,7 @@ pub trait Backend<'de>: settings::Named + Sized {
 
     fn name() -> &'static str;
     fn new(settings: Self::Settings) -> Result<Self>;
-    fn log(&mut self, when: Instant, data: &[Device]) -> Result<()>;
+    fn log(&mut self, when: Duration, data: &[Device]) -> Result<()>;
     fn from_settings() -> Result<Self> {
         Self::new(settings::get_for_backend::<Self>()?)
     }
@@ -86,7 +86,7 @@ impl Dispatcher {
     }
 
     fn call_backend<'de, B: Backend<'de> + Send>(
-        t: Instant,
+        t: Duration,
         devices: Arc<Vec<Device>>,
         backend: &'static ToggleBackend<B>,
     ) {
@@ -115,7 +115,7 @@ impl Dispatcher {
             .map_err(|_| "Dispatcher can only be initialized once".into())
     }
 
-    pub fn dispatch(time: Instant, devices: &Arc<Vec<Device>>) {
+    pub fn dispatch(time: Duration, devices: &Arc<Vec<Device>>) {
         let dispatcher = Self::get();
         Self::call_backend(time, devices.clone(), &dispatcher.console);
         Self::call_backend(time, devices.clone(), &dispatcher.csv);

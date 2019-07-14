@@ -13,7 +13,7 @@ use tokio::prelude::*;
 use tokio::timer::Interval;
 
 use std::borrow::Borrow;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 mod auth;
 mod backend;
@@ -61,9 +61,14 @@ fn app(
     )
     .and_then(move |sid| {
         Interval::new(Instant::now(), poll_interval)
-            .for_each(move |t| {
+            .for_each(move |_| {
                 device::devicelistinfos(&client, &settings.url, &sid)
-                    .map(move |list| Dispatcher::dispatch(t, &list))
+                    .map(move |list| {
+                        let t = SystemTime::now()
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .expect("Your system clock is skewed.");
+                        Dispatcher::dispatch(t, &list)
+                    })
                     .or_else(|e| {
                         let err = Error::with_chain(e, "Failed getting device infos");
                         print_errors(&err);

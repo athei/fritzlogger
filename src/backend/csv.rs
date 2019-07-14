@@ -8,7 +8,7 @@ use csv::{Writer, WriterBuilder};
 use serde::{Deserialize, Serialize};
 
 use std::fs::{File, OpenOptions};
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 #[derive(Deserialize, Serialize)]
 pub struct Settings {
@@ -46,11 +46,8 @@ impl<'de> Backend<'de> for Csv {
         Ok(ret)
     }
 
-    fn log(&mut self, _: Instant, data: &[Device]) -> Result<()> {
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+    fn log(&mut self, when: Duration, data: &[Device]) -> Result<()> {
+        let timestamp = when.as_secs();
         let records = data.iter().map(|d| Record {
             timestamp,
             id: &d.common.unique_id,
